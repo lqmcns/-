@@ -5,146 +5,141 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>多端消息互传</title>
     <style>
-        /* Material Design风格 */
+        :root {
+            --bg: #101214;
+            --surface: #191C21;
+            --surface-2: #22262D;
+            --border: #2C313A;
+            --text: #E6E9ED;
+            --text-2: #8B95A1;
+            --accent: #5B9BFF;
+            --accent-dim: rgba(91, 155, 255, 0.14);
+            --green: #3FA871;
+            --green-dim: rgba(63, 168, 113, 0.14);
+            --red: #E05252;
+            --red-dim: rgba(224, 82, 82, 0.14);
+            --teal: #2FA8A0;
+            --teal-dim: rgba(47, 168, 160, 0.14);
+            --purple: #A37BE0;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Roboto', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #f5f5f5;
-            padding: 0;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
         }
 
         .container {
             max-width: 100%;
             margin: 0;
-            background: #f5f5f5;
             overflow-x: hidden;
         }
 
-        /* Material Design AppBar */
         .header {
-            background: #1976D2;
-            color: white;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
             padding: 16px 20px;
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-mark {
+            width: 8px;
+            height: 20px;
+            border-radius: 2px;
+            background: var(--accent);
+            flex-shrink: 0;
         }
 
         .header h1 {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 500;
             letter-spacing: 0.5px;
         }
 
         .content {
             padding: 16px;
+            max-width: 720px;
+            margin: 0 auto;
         }
 
-        /* Material Design Cards */
         .card {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
             margin-bottom: 16px;
             overflow: hidden;
         }
 
         .card-header {
-            padding: 16px;
-            background: white;
-            border-bottom: 1px solid #e0e0e0;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
         }
 
         .card-title {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 500;
-            color: #212121;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            color: var(--text);
         }
 
         .card-body {
             padding: 16px;
         }
 
-        /* Material Design Inputs */
         textarea {
             width: 100%;
             height: 120px;
-            padding: 12px 16px;
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
+            padding: 12px 14px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
             font-size: 16px;
+            color: var(--text);
             resize: vertical;
             font-family: inherit;
-            background: white;
-            transition: border-color 0.3s;
+            transition: border-color 0.2s;
         }
+
+        textarea::placeholder { color: var(--text-2); }
 
         textarea:focus {
             outline: none;
-            border-color: #1976D2;
+            border-color: var(--accent);
         }
 
-        /* Material Design Buttons */
         .btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 8px 16px;
+            padding: 8px 18px;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            min-height: 36px;
+            transition: filter 0.15s, transform 0.1s;
+            min-height: 38px;
         }
 
-        .btn-primary {
-            background: #1976D2;
-            color: white;
-        }
+        .btn:active { transform: scale(0.98); }
+        .btn:hover { filter: brightness(1.12); }
 
-        .btn-primary:hover {
-            background: #1565C0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
+        .btn-primary { background: var(--accent); color: #0E1114; }
+        .btn-success { background: var(--green); color: #0E1114; }
+        .btn-danger { background: var(--red); color: #FFFFFF; }
+        .btn-info { background: var(--teal); color: #0E1114; }
 
-        .btn-success {
-            background: #388E3C;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #2E7D32;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .btn-danger {
-            background: #D32F2F;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #C62828;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .btn-info {
-            background: #0288D1;
-            color: white;
-        }
-
-        .btn-info:hover {
-            background: #0277BD;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        .btn-ghost {
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border);
         }
 
         .btn-group {
@@ -154,138 +149,123 @@
             margin-top: 12px;
         }
 
-        /* Status Messages */
         .status {
             margin-top: 12px;
-            padding: 12px 16px;
-            border-radius: 4px;
-            font-size: 14px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.5;
         }
 
-        .status-success {
-            background: #E8F5E9;
-            color: #2E7D32;
-        }
+        .status-success { background: var(--green-dim); color: #7BD8A6; }
+        .status-error { background: var(--red-dim); color: #F09A9A; }
+        .status-info { background: var(--accent-dim); color: #9CC0FF; }
 
-        .status-error {
-            background: #FFEBEE;
-            color: #C62828;
-        }
-
-        .status-info {
-            background: #E3F2FD;
-            color: #1565C0;
-        }
-
-        /* File Upload */
-        .file-upload {
-            margin-top: 12px;
-        }
-
-        .file-input {
-            display: none;
-        }
+        .file-upload { margin-top: 4px; }
+        .file-input { display: none; }
 
         .file-label {
             display: inline-flex;
             align-items: center;
-            padding: 8px 16px;
-            background: #E0E0E0;
-            color: #424242;
-            border-radius: 4px;
+            padding: 9px 18px;
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
             font-weight: 500;
-            transition: background 0.2s;
+            transition: border-color 0.15s, filter 0.15s;
         }
 
-        .file-label:hover {
-            background: #BDBDBD;
-        }
+        .file-label:hover { border-color: var(--accent); filter: brightness(1.15); }
 
         .file-info {
-            margin-top: 8px;
+            margin-top: 10px;
             font-size: 14px;
-            color: #616161;
+            color: var(--text-2);
+            word-break: break-all;
         }
 
-        /* 消息列表样式 */
+        .file-limit-hint {
+            margin-top: 4px;
+            font-size: 12px;
+            color: var(--text-2);
+            opacity: 0.75;
+        }
+
         .message-list {
-            max-height: 400px;
+            max-height: 440px;
             overflow-y: auto;
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            background: #FAFAFA;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg);
         }
 
         .message-item {
-            background: white;
-            padding: 12px 16px;
+            background: var(--surface);
+            padding: 12px 14px;
             margin: 8px;
             border-radius: 8px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            transition: box-shadow 0.2s;
+            border: 1px solid var(--border);
         }
 
-        .message-item:hover {
-            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-        }
-
-        .message-item.file-message {
-            border-left: 4px solid #388E3C;
-        }
-
-        .message-item.image-message {
-            border-left: 4px solid #0288D1;
-        }
+        .message-item.file-message { border-left: 3px solid var(--green); }
+        .message-item.image-message { border-left: 3px solid var(--accent); }
+        .message-item.media-message { border-left: 3px solid var(--purple); }
 
         .message-time {
             font-size: 12px;
-            color: #757575;
-            margin-bottom: 4px;
+            color: var(--text-2);
+            margin-bottom: 6px;
         }
 
         .message-content {
             font-size: 14px;
-            color: #212121;
-            line-height: 1.5;
+            color: var(--text);
+            line-height: 1.6;
             word-wrap: break-word;
+            white-space: pre-wrap;
         }
 
         .message-file {
             font-size: 13px;
-            color: #1976D2;
-            margin-top: 4px;
+            color: var(--accent);
+            margin-top: 6px;
+            word-break: break-all;
         }
 
         .message-image {
             max-width: 100%;
             max-height: 200px;
             margin-top: 8px;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: opacity 0.15s;
         }
 
-        .message-image:hover {
-            transform: scale(1.02);
+        .message-image:hover { opacity: 0.85; }
+
+        .message-media {
+            max-width: 100%;
+            margin-top: 8px;
+            border-radius: 6px;
         }
 
         .empty-message {
             text-align: center;
-            color: #9E9E9E;
-            padding: 32px 16px;
+            color: var(--text-2);
+            padding: 40px 16px;
             font-size: 14px;
         }
 
-        /* 图片预览 */
         .image-preview {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.92);
             display: none;
             justify-content: center;
             align-items: center;
@@ -299,108 +279,122 @@
             border-radius: 8px;
         }
 
-        .image-preview.show {
-            display: flex;
-        }
+        .image-preview.show { display: flex; }
 
-        /* 仓库容量信息卡片 */
         .storage-info {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-top: 12px;
+            gap: 10px;
         }
 
         .storage-item {
-            background: #F5F5F5;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
             padding: 12px;
-            border-radius: 4px;
+            border-radius: 8px;
             text-align: center;
         }
 
         .storage-label {
             font-size: 12px;
-            color: #757575;
+            color: var(--text-2);
             margin-bottom: 4px;
         }
 
         .storage-value {
             font-size: 18px;
             font-weight: 500;
-            color: #1976D2;
+            color: var(--accent);
         }
 
-        /* 响应式设计 */
+        .storage-usage {
+            margin-top: 12px;
+        }
+
+        .storage-usage-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: var(--surface-2);
+            overflow: hidden;
+        }
+
+        .storage-usage-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: var(--accent);
+            transition: width 0.4s;
+        }
+
+        .storage-usage-text {
+            margin-top: 6px;
+            font-size: 12px;
+            color: var(--text-2);
+        }
+
         @media (max-width: 600px) {
-            .header h1 {
-                font-size: 18px;
-            }
-
-            .card-body {
-                padding: 12px;
-            }
-
-            .btn {
-                padding: 6px 12px;
-                font-size: 13px;
-            }
-
-            .message-list {
-                max-height: 300px;
-            }
-
-            .storage-info {
-                grid-template-columns: 1fr;
-            }
+            .header h1 { font-size: 17px; }
+            .card-body { padding: 12px; }
+            .btn { padding: 7px 14px; font-size: 13px; }
+            .message-list { max-height: 340px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📱 多端消息互传</h1>
+            <div class="header-mark"></div>
+            <h1>多端消息互传</h1>
         </div>
         <div class="content">
-            <!-- 仓库容量信息 -->
+            <!-- 存储统计 -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">📊 仓库容量信息</div>
+                    <div class="card-title">存储统计</div>
                 </div>
                 <div class="card-body">
                     <div class="storage-info">
                         <div class="storage-item">
-                            <div class="storage-label">已使用容量</div>
-                            <div class="storage-value" id="usedStorage">计算中...</div>
+                            <div class="storage-label">消息总数</div>
+                            <div class="storage-value" id="statTotal">--</div>
                         </div>
                         <div class="storage-item">
-                            <div class="storage-label">剩余容量</div>
-                            <div class="storage-value" id="remainingStorage">计算中...</div>
+                            <div class="storage-label">图片</div>
+                            <div class="storage-value" id="statImages">--</div>
                         </div>
                         <div class="storage-item">
-                            <div class="storage-label">已存图片数</div>
-                            <div class="storage-value" id="imageCount">计算中...</div>
+                            <div class="storage-label">文件 / 音视频</div>
+                            <div class="storage-value" id="statFiles">--</div>
                         </div>
                         <div class="storage-item">
-                            <div class="storage-label">可存图片数（估算）</div>
-                            <div class="storage-value" id="estimatedImages">计算中...</div>
+                            <div class="storage-label">数据文件大小</div>
+                            <div class="storage-value" id="statSize">--</div>
+                        </div>
+                        <div class="storage-item">
+                            <div class="storage-label">预计还可存</div>
+                            <div class="storage-value" id="statEstimate">--</div>
                         </div>
                     </div>
-                    <div id="storageStatus" style="margin-top: 8px; font-size: 12px; color: #757575;"></div>
+                    <div class="storage-usage">
+                        <div class="storage-usage-bar">
+                            <div class="storage-usage-fill" id="usageFill" style="width: 0%;"></div>
+                        </div>
+                        <div class="storage-usage-text" id="storageStatus">等待加载...</div>
+                    </div>
                 </div>
             </div>
 
             <!-- 消息列表 -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">💬 消息列表</div>
+                    <div class="card-title">消息列表</div>
                 </div>
                 <div class="card-body">
                     <div class="btn-group">
-                        <button class="btn btn-primary" onclick="loadMessages()">🔄 刷新消息</button>
-                        <button class="btn btn-success" onclick="saveToLocal()">💾 保存到电脑</button>
+                        <button class="btn btn-primary" onclick="loadMessages()">刷新消息</button>
+                        <button class="btn btn-ghost" onclick="saveToLocal()">导出备份</button>
                     </div>
                     <div id="messageList" class="message-list">
-                        <div class="empty-message">暂无消息，点击"刷新消息"加载</div>
+                        <div class="empty-message">暂无消息，正在加载...</div>
                     </div>
                     <div id="readStatus"></div>
                 </div>
@@ -409,13 +403,13 @@
             <!-- 发送新消息 -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">📤 发送新消息</div>
+                    <div class="card-title">发送新消息</div>
                 </div>
                 <div class="card-body">
                     <textarea id="writeContent" placeholder="输入要发送的消息..."></textarea>
                     <div class="btn-group">
                         <button class="btn btn-primary" onclick="writeToGitee()">发送消息</button>
-                        <button class="btn btn-info" onclick="clearText()">清空内容</button>
+                        <button class="btn btn-ghost" onclick="clearText()">清空内容</button>
                     </div>
                     <div id="writeStatus"></div>
                 </div>
@@ -424,13 +418,14 @@
             <!-- 上传文件 -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">📁 上传文件</div>
+                    <div class="card-title">上传文件</div>
                 </div>
                 <div class="card-body">
                     <div class="file-upload">
                         <label class="file-label" for="fileInput">选择文件</label>
-                        <input type="file" id="fileInput" class="file-input" accept="image/*,.pdf,.txt,.doc,.docx">
+                        <input type="file" id="fileInput" class="file-input">
                         <div class="file-info" id="fileInfo">未选择文件</div>
+                        <div class="file-limit-hint">支持任意格式（图片 / 音频 / 视频 / 文档 / 压缩包等），单文件最大 50 MB；受 Gitee 接口限制，实际建议小于 1 MB</div>
                         <button class="btn btn-primary" style="margin-top: 12px;" onclick="uploadFile()">上传文件</button>
                     </div>
                     <div id="fileStatus"></div>
@@ -446,102 +441,52 @@
 
     <script>
         const REPO_API = 'https://gitee.com/api/v5/repos/northsey/message/contents/%E6%B6%88%E6%81%AF%E5%AD%98%E5%82%A8.txt';
-        const REPO_FILES_API = 'https://gitee.com/api/v5/repos/northsey/message/contents/';
-        const REPO_INFO_API = 'https://gitee.com/api/v5/repos/northsey/message';
-        const TOKEN = '192a9f9e315df8703850b28e3962d911'; // 默认令牌
+        const TOKEN = '192a9f9e315df8703850b28e3962d911';
 
-        // 页面加载时自动获取仓库容量信息
+        // 文件大小上限（50 MB）
+        const MAX_FILE_SIZE = 50 * 1024 * 1024;
+
+        // 仓库配额（Gitee 免费版按 1 GB 估算）
+        const QUOTA_BYTES = 1024 * 1024 * 1024;
+
+        // 是否为 iOS / iPadOS 设备（Safari 上 a[download] 不可用）
+        const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        // 页面加载：只加载一次
         window.onload = function() {
-            loadStorageInfo();
             loadMessages();
         };
 
-        // 获取仓库容量信息
-        async function loadStorageInfo() {
-            try {
-                const response = await fetch(REPO_INFO_API, {
-                    headers: { 'Authorization': `token ${TOKEN}` }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const repoData = await response.json();
-                console.log('仓库信息:', repoData);
-
-                // Gitee仓库大小限制（免费版1024MB）
-                const maxSize = 1024; // MB
-                const usedSize = repoData.size || 0; // KB
-                const usedSizeMB = usedSize / 1024;
-                const remainingSizeMB = maxSize - usedSizeMB;
-
-                // 获取消息文件内容，计算图片数量
-                let imageCount = 0;
-                try {
-                    const msgResponse = await fetch(REPO_API, {
-                        headers: { 'Authorization': `token ${TOKEN}` }
-                    });
-                    if (msgResponse.ok) {
-                        const msgData = await msgResponse.json();
-                        const content = base64ToUtf8(msgData.content.replace(/\n/g, ''));
-                        // 统计图片数量（查找[图片]标记）
-                        const imageMatches = content.match(/\[图片\]/g);
-                        imageCount = imageMatches ? imageMatches.length : 0;
-                    }
-                } catch (e) {
-                    console.log('获取消息文件失败:', e);
-                }
-
-                // 估算可存图片数（假设每张图片平均200KB）
-                const avgImageSizeKB = 200;
-                const estimatedImages = Math.floor(remainingSizeMB * 1024 / avgImageSizeKB);
-
-                // 更新显示
-                document.getElementById('usedStorage').textContent = `${usedSizeMB.toFixed(2)} MB`;
-                document.getElementById('remainingStorage').textContent = `${remainingSizeMB.toFixed(2)} MB`;
-                document.getElementById('imageCount').textContent = `${imageCount} 张`;
-                document.getElementById('estimatedImages').textContent = `约 ${estimatedImages} 张`;
-
-                document.getElementById('storageStatus').textContent = 
-                    `仓库总容量: ${maxSize} MB | 已使用: ${(usedSizeMB / maxSize * 100).toFixed(1)}%`;
-
-            } catch (error) {
-                console.error('获取仓库容量失败:', error);
-                document.getElementById('usedStorage').textContent = '获取失败';
-                document.getElementById('remainingStorage').textContent = '获取失败';
-                document.getElementById('imageCount').textContent = '获取失败';
-                document.getElementById('estimatedImages').textContent = '获取失败';
-            }
-        }
-
-        // UTF-8编码函数（解决中文问题）
+        // UTF-8 与 Base64 互转
         function utf8ToBase64(str) {
-            try {
-                return btoa(unescape(encodeURIComponent(str)));
-            } catch (e) {
-                console.error('Base64编码错误:', e);
-                return btoa(str);
-            }
+            return btoa(unescape(encodeURIComponent(str)));
         }
 
         function base64ToUtf8(base64) {
-            try {
-                return decodeURIComponent(escape(atob(base64)));
-            } catch (e) {
-                console.error('Base64解码错误:', e);
-                return atob(base64);
-            }
+            return decodeURIComponent(escape(atob(base64)));
         }
 
+        // 状态持久显示，不自动清空，由下一次操作更新
         function showStatus(elementId, message, type) {
             const status = document.getElementById(elementId);
             status.className = `status status-${type}`;
-            status.innerHTML = message;
-            setTimeout(() => { status.innerHTML = ''; }, 5000);
+            status.textContent = message;
         }
 
-        // 解析消息内容（支持base64图片）
+        function formatFileSize(bytes) {
+            if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+            if (bytes >= 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+            return `${bytes} B`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : String(text);
+            return div.innerHTML;
+        }
+
+        // 解析消息内容（兼容旧格式）
         function parseMessages(content) {
             const messages = [];
             const sections = content.split('========================================');
@@ -551,49 +496,35 @@
                 if (!section) continue;
 
                 const lines = section.split('\n');
-                let currentMessage = {
-                    time: '',
-                    content: '',
-                    type: 'text',
-                    file: null,
-                    base64Data: null
-                };
+                const currentMessage = { time: '', content: '', type: 'text', file: null, base64Data: null };
 
                 for (let j = 0; j < lines.length; j++) {
                     const line = lines[j].trim();
                     if (!line) continue;
 
-                    // 检测时间戳
                     if (line.match(/^\d{4}-\d{2}-\d{2}/)) {
                         currentMessage.time = line;
                         continue;
                     }
 
-                    // 检测文件标记
                     if (line.startsWith('[图片]') || line.startsWith('[文件]')) {
                         currentMessage.type = line.startsWith('[图片]') ? 'image' : 'file';
                         currentMessage.file = line.replace(/^\[(图片|文件)\]\s*/, '');
                         continue;
                     }
 
-                    // 检测上传时间
                     if (line.startsWith('上传时间:')) {
                         currentMessage.time = line.replace('上传时间:', '').trim();
                         continue;
                     }
 
-                    // 检测大小
-                    if (line.startsWith('大小:')) {
-                        continue;
-                    }
+                    if (line.startsWith('大小:')) continue;
 
-                    // 检测BASE64_DATA标记
                     if (line === 'BASE64_DATA:') {
-                        // 提取base64数据（从下一行开始到结束）
                         const base64Lines = [];
                         for (let k = j + 1; k < lines.length; k++) {
                             const base64Line = lines[k];
-                            if (base64Line.trim() && !base64Line.startsWith('========================================')) {
+                            if (base64Line.trim() && !base64Line.startsWith('====')) {
                                 base64Lines.push(base64Line);
                             } else {
                                 break;
@@ -603,7 +534,6 @@
                         break;
                     }
 
-                    // 普通内容
                     currentMessage.content += (currentMessage.content ? '\n' : '') + line;
                 }
 
@@ -615,9 +545,18 @@
             return messages.reverse(); // 最新的在前面
         }
 
-        // 渲染消息列表
+        // 根据文件名判断媒体类型
+        function getMediaType(fileName) {
+            const ext = (fileName || '').toLowerCase().split('.').pop();
+            if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(ext)) return 'audio';
+            if (['mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v', 'ogv'].includes(ext)) return 'video';
+            return null;
+        }
+
+        // 渲染消息列表（所有事件按索引传参，避免把 base64 内联进 HTML）
         function renderMessages(messages) {
             const container = document.getElementById('messageList');
+            window.messagesData = messages;
 
             if (messages.length === 0) {
                 container.innerHTML = '<div class="empty-message">暂无消息</div>';
@@ -627,41 +566,50 @@
             container.innerHTML = messages.map((msg, index) => {
                 let itemClass = 'message-item';
                 if (msg.type === 'image') itemClass += ' image-message';
-                if (msg.type === 'file') itemClass += ' file-message';
+                else if (msg.type === 'file' && getMediaType(msg.file)) itemClass += ' media-message';
+                else if (msg.type === 'file') itemClass += ' file-message';
 
-                let contentHtml = `<div class="message-content">${escapeHtml(msg.content)}</div>`;
+                let contentHtml = '';
+                if (msg.content) {
+                    contentHtml += `<div class="message-content">${escapeHtml(msg.content)}</div>`;
+                }
 
                 if (msg.type === 'image' && msg.base64Data) {
-                    // 显示base64图片
                     contentHtml += `
-                        <img src="${msg.base64Data}" class="message-image" onclick="previewBase64Image('${msg.base64Data}', '${msg.file}')" alt="${msg.file}">
-                        <div class="message-file">📎 ${msg.file}</div>
-                        <div class="btn-group" style="margin-top: 8px;">
-                            <button class="btn btn-success" style="padding: 6px 16px; font-size: 12px;" onclick="downloadBase64Image('${msg.base64Data}', '${msg.file}')">💾 保存图片</button>
-                            <button class="btn btn-danger" style="padding: 6px 16px; font-size: 12px;" onclick="deleteMessage(${index})">🗑️ 删除</button>
+                        <img src="${msg.base64Data}" class="message-image" onclick="previewImageByIndex(${index})" alt="${escapeHtml(msg.file)}">
+                        <div class="message-file">${escapeHtml(msg.file)}</div>
+                        <div class="btn-group">
+                            <button class="btn btn-success" style="padding: 6px 16px; font-size: 12px;" onclick="saveFileByIndex(${index})">保存图片</button>
+                            <button class="btn btn-danger" style="padding: 6px 16px; font-size: 12px;" onclick="deleteMessage(${index})">删除</button>
                         </div>
                     `;
                 } else if (msg.type === 'file' && msg.base64Data) {
-                    // 显示文件信息
+                    const mediaType = getMediaType(msg.file);
+                    let mediaHtml = '';
+                    if (mediaType === 'audio') {
+                        mediaHtml = `<audio controls class="message-media" src="${msg.base64Data}"></audio>`;
+                    } else if (mediaType === 'video') {
+                        mediaHtml = `<video controls class="message-media" style="max-height: 300px;" src="${msg.base64Data}"></video>`;
+                    }
                     contentHtml += `
-                        <div class="message-file">📎 文件: ${msg.file}</div>
-                        <div class="btn-group" style="margin-top: 8px;">
-                            <button class="btn btn-success" style="padding: 6px 16px; font-size: 12px;" onclick="downloadBase64File('${msg.base64Data}', '${msg.file}')">💾 保存文件</button>
-                            <button class="btn btn-danger" style="padding: 6px 16px; font-size: 12px;" onclick="deleteMessage(${index})">🗑️ 删除</button>
+                        <div class="message-file">${escapeHtml(msg.file)}</div>
+                        ${mediaHtml}
+                        <div class="btn-group">
+                            <button class="btn btn-success" style="padding: 6px 16px; font-size: 12px;" onclick="saveFileByIndex(${index})">保存文件</button>
+                            <button class="btn btn-danger" style="padding: 6px 16px; font-size: 12px;" onclick="deleteMessage(${index})">删除</button>
                         </div>
                     `;
                 } else if (msg.file) {
-                    // 旧格式：显示文件路径（兼容旧数据）
+                    // 旧格式：只有文件名没有数据
                     contentHtml += `
-                        <div class="message-file">📎 ${msg.file}</div>
-                        <button class="btn btn-danger" style="margin-top: 8px; padding: 6px 16px; font-size: 12px;" onclick="deleteMessage(${index})">🗑️ 删除</button>
+                        <div class="message-file">${escapeHtml(msg.file)}</div>
+                        <button class="btn btn-danger" style="margin-top: 8px; padding: 6px 16px; font-size: 12px;" onclick="deleteMessage(${index})">删除</button>
                     `;
                 } else {
-                    // 文本消息添加保存和删除按钮
                     contentHtml += `
-                        <div class="btn-group" style="margin-top: 8px;">
-                            <button class="btn btn-success" style="padding: 6px 16px; font-size: 12px;" onclick="saveMessage(${index})">💾 保存消息</button>
-                            <button class="btn btn-danger" style="padding: 6px 16px; font-size: 12px;" onclick="deleteMessage(${index})">�️ 删除</button>
+                        <div class="btn-group">
+                            <button class="btn btn-success" style="padding: 6px 16px; font-size: 12px;" onclick="copyMessage(${index})">复制</button>
+                            <button class="btn btn-danger" style="padding: 6px 16px; font-size: 12px;" onclick="deleteMessage(${index})">删除</button>
                         </div>
                     `;
                 }
@@ -673,21 +621,49 @@
                     </div>
                 `;
             }).join('');
-
-            // 保存消息数据供后续使用
-            window.messagesData = messages;
         }
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        // 用真实消息文件数据更新存储统计和剩余可存估算
+        function updateStorageStats(messages, rawContentLength) {
+            let images = 0, files = 0;
+            const mediaSizes = [];
+
+            for (const msg of messages) {
+                if (msg.type === 'image') {
+                    images++;
+                    if (msg.base64Data) mediaSizes.push(msg.base64Data.length * 3 / 4);
+                } else if (msg.type === 'file') {
+                    files++;
+                    if (msg.base64Data) mediaSizes.push(msg.base64Data.length * 3 / 4);
+                }
+            }
+
+            // 平均文件大小：优先用已存文件的真实平均值，无文件时按 200 KB 估算
+            const avgSize = mediaSizes.length > 0
+                ? mediaSizes.reduce((a, b) => a + b, 0) / mediaSizes.length
+                : 200 * 1024;
+
+            const usedBytes = rawContentLength;
+            const remainingBytes = Math.max(0, QUOTA_BYTES - usedBytes);
+            const estimatedCount = Math.floor(remainingBytes / avgSize);
+
+            document.getElementById('statTotal').textContent = messages.length;
+            document.getElementById('statImages').textContent = images;
+            document.getElementById('statFiles').textContent = files;
+            document.getElementById('statSize').textContent = formatFileSize(usedBytes);
+            document.getElementById('statEstimate').textContent = `约 ${estimatedCount} 个`;
+
+            const usagePercent = Math.min(100, usedBytes / QUOTA_BYTES * 100);
+            document.getElementById('usageFill').style.width = `${usagePercent}%`;
+            document.getElementById('storageStatus').textContent =
+                `已用 ${usagePercent.toFixed(2)}%（配额按 1 GB 估算） · 均文件 ${formatFileSize(avgSize)}`;
         }
 
-        // 预览base64图片
-        function previewBase64Image(base64Data, name) {
-            document.getElementById('previewImg').src = base64Data;
-            document.getElementById('previewImg').alt = name || '图片预览';
+        // 预览图片（按索引取数据）
+        function previewImageByIndex(index) {
+            const msg = (window.messagesData || [])[index];
+            if (!msg || !msg.base64Data) return;
+            document.getElementById('previewImg').src = msg.base64Data;
             document.getElementById('imagePreview').classList.add('show');
         }
 
@@ -695,140 +671,140 @@
             document.getElementById('imagePreview').classList.remove('show');
         }
 
-        // 下载base64图片（Android兼容版本）
-        function downloadBase64Image(base64Data, fileName) {
+        // dataURL 转 Blob（同步，保证在用户手势上下文内完成）
+        function dataUrlToBlob(dataUrl) {
+            const parts = dataUrl.split(',');
+            const mime = parts[0].match(/:(.*?);/)[1];
+            const byteString = atob(parts[1]);
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+            return new Blob([ab], { type: mime });
+        }
+
+        // 跨平台保存文件：iOS 用分享面板/新标签长按保存，其他平台用 a[download]
+        function saveBase64File(dataUrl, fileName) {
             try {
-                // 使用Blob方式下载（更兼容Android WebView）
-                const byteString = atob(base64Data.split(',')[1]);
-                const mimeString = base64Data.split(',')[0].split(':')[1].split(';')[0];
-                
-                const ab = new ArrayBuffer(byteString.length);
-                const ia = new Uint8Array(ab);
-                for (let i = 0; i < byteString.length; i++) {
-                    ia[i] = byteString.charCodeAt(i);
+                const blob = dataUrlToBlob(dataUrl);
+
+                // 优先使用 Web Share API（iOS Safari 分享面板里有"存储图像"）
+                if (navigator.canShare && navigator.canShare({ files: [blob] })) {
+                    navigator.share({ files: [blob] }).catch(() => {});
+                    return;
                 }
-                
-                const blob = new Blob([ab], { type: mimeString });
+
+                // iOS 降级：新标签打开，长按图片选择"存储图像"
+                if (IS_IOS) {
+                    const url = URL.createObjectURL(blob);
+                    const win = window.open(url, '_blank');
+                    if (!win) {
+                        window.location.href = url;
+                    }
+                    showToast('在新标签页中长按图片，选择"存储图像"', 'success');
+                    setTimeout(() => URL.revokeObjectURL(url), 60000);
+                    return;
+                }
+
+                // 标准下载路径
                 const url = URL.createObjectURL(blob);
-                
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = fileName;
                 a.style.display = 'none';
                 document.body.appendChild(a);
                 a.click();
-                
-                // 延迟释放URL和移除元素
                 setTimeout(() => {
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
                 }, 100);
-                
-                // 使用自定义提示（避免alert在WebView中崩溃）
-                showToast('✅ 图片已保存', 'success');
+                showToast('文件已保存', 'success');
             } catch (error) {
-                showToast('❌ 下载失败: ' + error.message, 'error');
+                showToast('保存失败: ' + error.message, 'error');
                 console.error(error);
             }
         }
 
-        // 下载base64文件（Android兼容版本）
-        function downloadBase64File(base64Data, fileName) {
-            try {
-                // 使用Blob方式下载
-                const byteString = atob(base64Data.split(',')[1]);
-                const mimeString = base64Data.split(',')[0].split(':')[1].split(';')[0];
-                
-                const ab = new ArrayBuffer(byteString.length);
-                const ia = new Uint8Array(ab);
-                for (let i = 0; i < byteString.length; i++) {
-                    ia[i] = byteString.charCodeAt(i);
-                }
-                
-                const blob = new Blob([ab], { type: mimeString });
-                const url = URL.createObjectURL(blob);
-                
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = fileName;
-                a.style.display = 'none';
-                document.body.appendChild(a);
-                a.click();
-                
-                setTimeout(() => {
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                }, 100);
-                
-                showToast('✅ 文件已保存', 'success');
-            } catch (error) {
-                showToast('❌ 下载失败: ' + error.message, 'error');
-                console.error(error);
+        // 按索引保存图片/文件
+        function saveFileByIndex(index) {
+            const msg = (window.messagesData || [])[index];
+            if (!msg || !msg.base64Data) {
+                showToast('文件数据不存在', 'error');
+                return;
             }
+            saveBase64File(msg.base64Data, msg.file || 'file');
         }
 
-        // Toast提示（替代alert，避免WebView崩溃）
+        // Toast 提示
         function showToast(message, type) {
             const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
             toast.textContent = message;
             toast.style.cssText = `
                 position: fixed;
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                padding: 16px 24px;
+                padding: 14px 22px;
                 border-radius: 8px;
-                background: ${type === 'success' ? '#4CAF50' : '#F44336'};
-                color: white;
+                background: #262B33;
+                border: 1px solid #3A414C;
+                color: ${type === 'success' ? '#7BD8A6' : '#F09A9A'};
                 font-size: 14px;
                 z-index: 9999;
-                box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+                box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+                max-width: 80%;
+                text-align: center;
             `;
             document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.remove();
-            }, 2000);
+            setTimeout(() => { toast.remove(); }, 2200);
         }
 
-        // 保存单条消息
-        function saveMessage(index) {
-            const messages = window.messagesData || [];
-            const msg = messages[index];
-
-            if (!msg) {
-                alert('消息不存在');
+        // 复制消息文本到剪贴板（含 iOS Safari 降级）
+        function copyMessage(index) {
+            const msg = (window.messagesData || [])[index];
+            if (!msg || !msg.content) {
+                showToast('消息不存在', 'error');
                 return;
             }
 
-            const content = `时间: ${msg.time}\n内容: ${msg.content}`;
-            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `消息_${new Date().toISOString().slice(0,10)}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            const text = msg.content;
 
-            alert('✅ 消息已保存');
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('已复制到剪贴板', 'success');
+                }).catch(() => {
+                    fallbackCopyText(text);
+                });
+            } else {
+                fallbackCopyText(text);
+            }
         }
 
-        // 加载消息
+        // 剪贴板降级方案（execCommand，兼容 iOS Safari 与 file:// 场景）
+        function fallbackCopyText(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.cssText = 'position: fixed; top: -9999px; left: -9999px; opacity: 0;';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            try {
+                const ok = document.execCommand('copy');
+                showToast(ok ? '已复制到剪贴板' : '复制失败，请手动选择文本复制', ok ? 'success' : 'error');
+            } catch (e) {
+                showToast('复制失败，请手动选择文本复制', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // 加载消息（同时更新存储统计，只发一次请求）
         async function loadMessages() {
-            const token = TOKEN;
-            if (!token) {
-                showStatus('readStatus', '❌ 请输入私人令牌', 'error');
-                return;
-            }
-
-            showStatus('readStatus', '⏳ 正在加载...', 'info');
+            showStatus('readStatus', '正在加载...', 'info');
 
             try {
                 const response = await fetch(REPO_API, {
-                    headers: { 'Authorization': `token ${token}` }
+                    headers: { 'Authorization': `token ${TOKEN}` }
                 });
 
                 if (!response.ok) {
@@ -838,42 +814,35 @@
                 const data = await response.json();
                 const content = base64ToUtf8(data.content.replace(/\n/g, ''));
 
-                // 保存原始内容用于下载
                 window.rawContent = content;
-
                 const messages = parseMessages(content);
                 renderMessages(messages);
+                updateStorageStats(messages, content.length);
 
-                showStatus('readStatus', `✅ 加载成功！共 ${messages.length} 条消息`, 'success');
+                showStatus('readStatus', `加载成功，共 ${messages.length} 条消息`, 'success');
             } catch (error) {
-                showStatus('readStatus', `❌ 加载失败: ${error.message}`, 'error');
+                showStatus('readStatus', `加载失败: ${error.message}`, 'error');
                 console.error(error);
             }
         }
 
         // 发送消息
         async function writeToGitee() {
-            const token = TOKEN;
             const content = document.getElementById('writeContent').value.trim();
 
-            if (!token) {
-                showStatus('writeStatus', '❌ 请输入私人令牌', 'error');
-                return;
-            }
             if (!content) {
-                showStatus('writeStatus', '❌ 请输入消息内容', 'error');
+                showStatus('writeStatus', '请输入消息内容', 'error');
                 return;
             }
 
-            showStatus('writeStatus', '⏳ 正在发送...', 'info');
+            showStatus('writeStatus', '正在发送...', 'info');
 
             try {
-                // 获取现有内容
                 let existingContent = '';
                 let sha = '';
                 try {
                     const checkResponse = await fetch(REPO_API, {
-                        headers: { 'Authorization': `token ${token}` }
+                        headers: { 'Authorization': `token ${TOKEN}` }
                     });
                     if (checkResponse.ok) {
                         const existing = await checkResponse.json();
@@ -884,21 +853,19 @@
                     console.log('文件不存在，将创建新文件');
                 }
 
-                // 添加新消息
                 const timestamp = new Date().toLocaleString('zh-CN', { hour12: false });
                 const newMessage = `\n\n========================================\n${timestamp}\n${content}\n`;
                 const finalContent = existingContent + newMessage;
 
-                const base64Content = utf8ToBase64(finalContent);
                 const response = await fetch(REPO_API, {
                     method: 'PUT',
                     headers: {
-                        'Authorization': `token ${token}`,
+                        'Authorization': `token ${TOKEN}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         message: '发送消息',
-                        content: base64Content,
+                        content: utf8ToBase64(finalContent),
                         sha: sha
                     })
                 });
@@ -907,22 +874,20 @@
                     throw new Error(`HTTP ${response.status}: ${await response.text()}`);
                 }
 
-                showStatus('writeStatus', '✅ 发送成功！', 'success');
+                showStatus('writeStatus', '发送成功', 'success');
                 document.getElementById('writeContent').value = '';
-
-                // 自动刷新消息列表
                 setTimeout(() => loadMessages(), 500);
             } catch (error) {
-                showStatus('writeStatus', `❌ 发送失败: ${error.message}`, 'error');
+                showStatus('writeStatus', `发送失败: ${error.message}`, 'error');
                 console.error(error);
             }
         }
 
-        // 保存到本地
+        // 导出原始数据备份
         function saveToLocal() {
             const content = window.rawContent || '';
             if (!content) {
-                showStatus('readStatus', '❌ 请先加载消息', 'error');
+                showStatus('readStatus', '请先加载消息', 'error');
                 return;
             }
 
@@ -936,59 +901,49 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            showStatus('readStatus', '✅ 已保存到电脑！', 'success');
+            showStatus('readStatus', '已导出备份文件', 'success');
         }
 
-        // 删除单条消息（Android兼容版本）
+        // 删除消息：用非空段落列表做映射，避免首段为空/非空导致的错删
         async function deleteMessage(index) {
-            // 使用自定义确认框（避免confirm在WebView中崩溃）
             showConfirmDialog('确定要删除这条消息吗？', async () => {
-                const token = TOKEN;
-                if (!token) {
-                    showToast('请先输入私人令牌', 'error');
-                    return;
-                }
-
                 try {
-                    // 获取当前消息文件内容
                     const response = await fetch(REPO_API, {
-                        headers: { 'Authorization': `token ${token}` }
+                        headers: { 'Authorization': `token ${TOKEN}` }
                     });
-                    
+
                     if (!response.ok) {
                         throw new Error(`获取消息失败: HTTP ${response.status}`);
                     }
 
                     const data = await response.json();
                     const existingContent = base64ToUtf8(data.content.replace(/\n/g, ''));
-                    const sha = data.sha;
 
-                    // 分割消息段落
-                    const sections = existingContent.split('========================================');
-                    
-                    // 计算实际索引（因为消息列表是反转的）
-                    const actualIndex = sections.length - 1 - index;
-                    
-                    // 删除指定段落
-                    sections.splice(actualIndex, 1);
-                    
-                    // 重新构建内容（如果还有消息，保留分隔符；如果空了，保留一个空格）
-                    let newContent = sections.join('========================================');
-                    if (newContent.trim() === '') {
-                        newContent = ' '; // 保留一个空格，避免空内容错误
+                    // 只保留非空段落，与 parseMessages 的展示顺序一一对应
+                    const sectionList = existingContent.split('========================================').filter(s => s.trim() !== '');
+
+                    if (index < 0 || index >= sectionList.length) {
+                        throw new Error('消息索引无效，请刷新后重试');
                     }
 
-                    // 更新到Gitee
+                    // 列表是倒序展示的，还原到实际位置
+                    const actualIndex = sectionList.length - 1 - index;
+                    sectionList.splice(actualIndex, 1);
+
+                    const newContent = sectionList.length > 0
+                        ? sectionList.join('\n\n========================================\n') + '\n'
+                        : ' ';
+
                     const updateResponse = await fetch(REPO_API, {
                         method: 'PUT',
                         headers: {
-                            'Authorization': `token ${token}`,
+                            'Authorization': `token ${TOKEN}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
                             message: '删除消息',
                             content: utf8ToBase64(newContent),
-                            sha: sha
+                            sha: data.sha
                         })
                     });
 
@@ -996,73 +951,58 @@
                         throw new Error(`删除失败: HTTP ${updateResponse.status}`);
                     }
 
-                    showToast('✅ 消息已删除', 'success');
-                    
-                    // 自动刷新消息列表
+                    showToast('消息已删除', 'success');
                     setTimeout(() => loadMessages(), 500);
                 } catch (error) {
-                    showToast('❌ 删除失败: ' + error.message, 'error');
+                    showToast('删除失败: ' + error.message, 'error');
                     console.error(error);
                 }
             });
         }
 
-        // 自定义确认框（替代confirm，避免WebView崩溃）
+        // 自定义确认框
         function showConfirmDialog(message, onConfirm) {
             const dialog = document.createElement('div');
-            dialog.className = 'confirm-dialog';
             dialog.style.cssText = `
                 position: fixed;
                 top: 0;
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0,0,0,0.5);
+                background: rgba(0,0,0,0.6);
                 display: flex;
                 justify-content: center;
                 align-items: center;
                 z-index: 9998;
             `;
-            
+
             const content = document.createElement('div');
             content.style.cssText = `
-                background: white;
+                background: #1E2228;
+                border: 1px solid #3A414C;
                 padding: 24px;
-                border-radius: 8px;
+                border-radius: 10px;
                 max-width: 80%;
                 text-align: center;
             `;
-            
+
             const text = document.createElement('p');
             text.textContent = message;
-            text.style.cssText = `
-                font-size: 16px;
-                margin-bottom: 16px;
-                color: #212121;
-            `;
-            
+            text.style.cssText = 'font-size: 15px; margin-bottom: 16px; color: #E6E9ED;';
+
             const buttons = document.createElement('div');
-            buttons.style.cssText = `
-                display: flex;
-                gap: 8px;
-                justify-content: center;
-            `;
-            
+            buttons.style.cssText = 'display: flex; gap: 8px; justify-content: center;';
+
             const yesBtn = document.createElement('button');
             yesBtn.textContent = '确定';
             yesBtn.className = 'btn btn-danger';
-            yesBtn.onclick = () => {
-                dialog.remove();
-                onConfirm();
-            };
-            
+            yesBtn.onclick = () => { dialog.remove(); onConfirm(); };
+
             const noBtn = document.createElement('button');
             noBtn.textContent = '取消';
-            noBtn.className = 'btn btn-primary';
-            noBtn.onclick = () => {
-                dialog.remove();
-            };
-            
+            noBtn.className = 'btn btn-ghost';
+            noBtn.onclick = () => { dialog.remove(); };
+
             buttons.appendChild(yesBtn);
             buttons.appendChild(noBtn);
             content.appendChild(text);
@@ -1073,96 +1013,84 @@
 
         function clearText() {
             document.getElementById('writeContent').value = '';
-            showStatus('writeStatus', '✅ 已清空', 'success');
+            showStatus('writeStatus', '已清空', 'success');
         }
 
+        // 文件选择即时校验
         document.getElementById('fileInput').addEventListener('change', function(e) {
+            const fileInfo = document.getElementById('fileInfo');
             if (e.target.files.length > 0) {
                 const file = e.target.files[0];
-                document.getElementById('fileInfo').textContent = `${file.name} - ${(file.size / 1024).toFixed(2)} KB`;
+                if (file.size > MAX_FILE_SIZE) {
+                    fileInfo.textContent = `${file.name} - ${formatFileSize(file.size)}（超过 50 MB 限制）`;
+                    fileInfo.style.color = '#F09A9A';
+                } else {
+                    fileInfo.textContent = `${file.name} - ${formatFileSize(file.size)}`;
+                    fileInfo.style.color = '';
+                }
             } else {
-                document.getElementById('fileInfo').textContent = '未选择文件';
+                fileInfo.textContent = '未选择文件';
+                fileInfo.style.color = '';
             }
         });
 
-        // 上传文件（新方案：直接存储base64到消息文件）
+        // 上传文件（任意格式转 base64 存储）
         async function uploadFile() {
-            const token = TOKEN;
             const fileInput = document.getElementById('fileInput');
 
-            if (!token) {
-                showStatus('fileStatus', '❌ 请输入私人令牌', 'error');
-                return;
-            }
             if (!fileInput.files.length) {
-                showStatus('fileStatus', '❌ 请选择文件', 'error');
+                showStatus('fileStatus', '请选择文件', 'error');
                 return;
             }
 
             const file = fileInput.files[0];
-            showStatus('fileStatus', `⏳ 正在处理 ${file.name}...`, 'info');
+
+            if (file.size > MAX_FILE_SIZE) {
+                showStatus('fileStatus', `文件过大：${formatFileSize(file.size)}，最大允许 50 MB`, 'error');
+                return;
+            }
+
+            showStatus('fileStatus', `正在处理 ${file.name}（${formatFileSize(file.size)}）...`, 'info');
 
             try {
                 const reader = new FileReader();
                 reader.onload = async function(e) {
-                    const base64Data = e.target.result; // 包含data:image/png;base64,前缀
-                    const timestamp = new Date().getTime();
+                    const base64Data = e.target.result; // data:<mime>;base64,xxx
                     const isImage = file.type.startsWith('image/');
-                    
-                    console.log('文件读取成功:', {
-                        name: file.name,
-                        size: file.size,
-                        type: file.type,
-                        base64Length: base64Data.length
-                    });
+                    const messageType = isImage ? '图片' : '文件';
+                    const timestampStr = new Date().toLocaleString('zh-CN', { hour12: false });
+
+                    const messageContent = `[${messageType}] ${file.name}\n上传时间: ${timestampStr}\n大小: ${formatFileSize(file.size)}\nBASE64_DATA:\n${base64Data}\n`;
 
                     try {
-                        // 直接把base64数据写入消息文件（就像文本消息一样）
-                        const messageType = isImage ? '图片' : '文件';
-                        const timestampStr = new Date().toLocaleString('zh-CN', { hour12: false });
-                        
-                        // 消息格式
-                        const messageContent = `[${messageType}] ${file.name}\n上传时间: ${timestampStr}\n大小: ${(file.size / 1024).toFixed(2)} KB\nBASE64_DATA:\n${base64Data}\n`;
-                        
-                        console.log('准备写入消息文件...');
-                        
-                        // 获取现有消息内容
                         let existingContent = '';
                         let sha = '';
-                        
+
                         try {
                             const response = await fetch(REPO_API, {
-                                headers: { 'Authorization': `token ${token}` }
+                                headers: { 'Authorization': `token ${TOKEN}` }
                             });
                             if (response.ok) {
                                 const data = await response.json();
                                 existingContent = base64ToUtf8(data.content.replace(/\n/g, ''));
                                 sha = data.sha;
-                                console.log('获取现有消息成功，sha:', sha);
                             }
                         } catch (e) {
                             console.log('消息文件不存在，将创建新文件');
                         }
 
-                        // 添加新消息
                         const newContent = existingContent + '\n\n========================================\n' + messageContent;
-                        
-                        // 写入消息文件（只需要处理消息文件的sha，这个我们已经很熟悉了）
+
                         const requestBody = {
-                            message: '上传图片/文件',
+                            message: '上传文件',
                             content: utf8ToBase64(newContent)
                         };
-                        
-                        if (sha) {
-                            requestBody.sha = sha;
-                        }
-
-                        console.log('写入消息文件，请求体:', requestBody);
+                        if (sha) requestBody.sha = sha;
 
                         const response = await fetch(REPO_API, {
                             method: 'PUT',
                             headers: {
-                                'Authorization': `token ${token}`,
+                                'Authorization': `token ${TOKEN}`,
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify(requestBody)
@@ -1170,74 +1098,26 @@
 
                         if (!response.ok) {
                             const errorText = await response.text();
-                            console.error('写入失败:', errorText);
                             throw new Error(`HTTP ${response.status}: ${errorText}`);
                         }
 
-                        console.log('上传成功！');
-                        showStatus('fileStatus', `✅ ${messageType}上传成功！`, 'success');
+                        showStatus('fileStatus', `${messageType}上传成功`, 'success');
 
-                        // 自动刷新消息列表
+                        fileInput.value = '';
+                        document.getElementById('fileInfo').textContent = '未选择文件';
+
                         setTimeout(() => loadMessages(), 500);
                     } catch (error) {
-                        showStatus('fileStatus', `❌ 上传失败: ${error.message}`, 'error');
-                        console.error('完整错误:', error);
+                        showStatus('fileStatus', `上传失败: ${error.message}`, 'error');
+                        console.error(error);
                     }
                 };
                 reader.readAsDataURL(file);
             } catch (error) {
-                showStatus('fileStatus', `❌ 读取文件失败: ${error.message}`, 'error');
+                showStatus('fileStatus', `读取文件失败: ${error.message}`, 'error');
                 console.error(error);
             }
         }
-
-        async function appendToMessageFile(token, content, filePath) {
-            try {
-                let existingContent = '';
-                let sha = '';
-
-                try {
-                    const response = await fetch(REPO_API, {
-                        headers: { 'Authorization': `token ${token}` }
-                    });
-                    if (response.ok) {
-                        const data = await response.json();
-                        existingContent = base64ToUtf8(data.content.replace(/\n/g, ''));
-                        sha = data.sha;
-                    }
-                } catch (e) {
-                    console.log('消息文件不存在，创建新文件');
-                }
-
-                const newContent = existingContent + '\n\n========================================\n' + content;
-
-                const requestBody = {
-                    message: '更新消息记录',
-                    content: utf8ToBase64(newContent)
-                };
-
-                // 只在sha存在时才添加sha参数
-                if (sha) {
-                    requestBody.sha = sha;
-                }
-
-                await fetch(REPO_API, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-            } catch (e) {
-                console.log('更新消息记录失败:', e);
-            }
-        }
-
-        // 页面加载时自动加载消息
-        window.addEventListener('load', () => {
-            setTimeout(() => loadMessages(), 500);
-        });
     </script>
 </body>
 </html>
