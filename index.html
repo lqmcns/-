@@ -252,6 +252,17 @@
             border-radius: 6px;
         }
 
+        .message-image.is-loading {
+            min-height: 80px;
+            background: var(--surface-2);
+        }
+
+        .media-error {
+            font-size: 12px;
+            color: #F09A9A;
+            margin-top: 6px;
+        }
+
         .empty-message {
             text-align: center;
             color: var(--text-2);
@@ -392,7 +403,9 @@
                     <div class="btn-group">
                         <button class="btn btn-primary" onclick="loadMessages()">刷新消息</button>
                         <button class="btn btn-ghost" onclick="saveToLocal()">导出备份</button>
+                        <button class="btn btn-ghost" onclick="migrateInlineMedia()">优化存储</button>
                     </div>
+                    <div id="migrateHint" class="file-limit-hint">旧消息里的图片是内联存储的，会让加载变慢。点击「优化存储」可把它们拆成独立文件。</div>
                     <div id="messageList" class="message-list">
                         <div class="empty-message">暂无消息，正在加载...</div>
                     </div>
@@ -440,8 +453,17 @@
     </div>
 
     <script>
-        const REPO_API = 'https://gitee.com/api/v5/repos/northsey/message/contents/%E6%B6%88%E6%81%AF%E5%AD%98%E5%82%A8.txt';
+        const GITEE_OWNER = 'northsey';
+        const GITEE_REPO = 'message';
+        const FILE_PATH = '消息存储.txt';
+
+        // 内容接口（读取 / 更新文件内容）
+        const REPO_API = `https://gitee.com/api/v5/repos/${GITEE_OWNER}/${GITEE_REPO}/contents/${encodeURIComponent(FILE_PATH)}`;
+
         const TOKEN = '192a9f9e315df8703850b28e3962d911';
+
+        // 网络请求超时时间（毫秒）
+        const REQUEST_TIMEOUT = 25000;
 
         // 文件大小上限（50 MB）
         const MAX_FILE_SIZE = 50 * 1024 * 1024;
@@ -465,6 +487,116 @@
 
         function base64ToUtf8(base64) {
             return decodeURIComponent(escape(atob(base64)));
+        }
+
+        // 带超时的请求：避免网络异常时界面永远停在"正在加载"
+        async function fetchWithTimeout(url, options = {}, timeout = REQUEST_TIMEOUT) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeout);
+            try {
+                return await fetch(url, { ...options, signal: controller.signal, cache: 'no-store' });
+            } catch (e) {
+                if (e.name === 'AbortError') {
+                    throw new Error(`请求超时（${timeout / 1000} 秒），请检查网络后重试`);
+                }
+                throw new Error(`网络异常：${e.message}`);
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        // 读取远端消息文件，返回 { content, sha }
+        // 关键点：
+        // 1. 加时间戳参数，绕开 Gitee 内容接口的 CDN 缓存（否则更新后读到旧版本）
+        // 2. Gitee 内容接口对超过 1MB 的文件不再返回 content 字段，
+        //    此时改用 download_url 拉取原始文本，否则会解析出 0 条消息
+        async function readRemoteFile() {
+            const url = `${REPO_API}?t=${Date.now()}`;
+            const response = await fetchWithTimeout(url, {
+                headers: {
+                    'Authorization': `token ${TOKEN}`,
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
+
+            // 文件尚不存在
+            if (response.status === 404) {
+                return { content: '', sha: '' };
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}：${await response.text()}`);
+            }
+
+            const data = await response.json();
+            const rawBase64 = (data.content || '').replace(/\n/g, '');
+            let content = rawBase64 ? base64ToUtf8(rawBase64) : '';
+
+            // 内容接口未返回正文（文件过大或异常），走原始下载地址兜底
+            if (!content && data.download_url) {
+                try {
+                    const rawResponse = await fetchWithTimeout(
+                        `${data.download_url}?access_token=${TOKEN}&t=${Date.now()}`,
+                        { cache: 'no-store' }
+                    );
+                    if (rawResponse.ok) {
+                        content = await rawResponse.text();
+                    }
+                } catch (e) {
+                    console.warn('原始下载地址兜底失败:', e);
+                }
+            }
+
+            if (!content && data.size > 0) {
+                throw new Error('消息文件读取失败（文件较大时接口未返回正文），请稍后重试');
+            }
+
+            return { content, sha: data.sha || '' };
+        }
+
+        // 写入远端消息文件，sha 冲突（409）时自动重取 sha 重试一次
+        async function writeRemoteFile(content, sha, commitMessage) {
+            const doPut = async (targetSha) => {
+                const body = { message: commitMessage, content: utf8ToBase64(content) };
+                if (targetSha) body.sha = targetSha;
+                return fetchWithTimeout(
+                    `${REPO_API}?t=${Date.now()}`,
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${TOKEN}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(body)
+                    }
+                );
+            };
+
+            let response = await doPut(sha);
+
+            if (response.status === 409) {
+                // sha 过期（多端同时操作），重新取最新 sha 后重试
+                const latest = await readRemoteFile();
+                response = await doPut(latest.sha);
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}：${await response.text()}`);
+            }
+            return response.json();
+        }
+
+        // 用已知内容直接刷新界面，不再重新请求远端
+        // 这样规避了"刚写入就去读，读到缓存旧版本"的问题
+        function applyContent(content, statusMessage) {
+            window.rawContent = content;
+            const messages = parseMessages(content);
+            renderMessages(messages);
+            updateStorageStats(messages, content.length);
+            if (statusMessage) {
+                showStatus('readStatus', statusMessage, 'success');
+            }
         }
 
         // 状态持久显示，不自动清空，由下一次操作更新
@@ -496,7 +628,7 @@
                 if (!section) continue;
 
                 const lines = section.split('\n');
-                const currentMessage = { time: '', content: '', type: 'text', file: null, base64Data: null };
+                const currentMessage = { time: '', content: '', type: 'text', file: null, filePath: null, base64Data: null };
 
                 for (let j = 0; j < lines.length; j++) {
                     const line = lines[j].trim();
@@ -520,6 +652,12 @@
 
                     if (line.startsWith('大小:')) continue;
 
+                    // 新格式：媒体文件单独存仓库，这里只记录路径
+                    if (line.startsWith('路径:')) {
+                        currentMessage.filePath = line.replace('路径:', '').trim();
+                        continue;
+                    }
+
                     if (line === 'BASE64_DATA:') {
                         const base64Lines = [];
                         for (let k = j + 1; k < lines.length; k++) {
@@ -537,7 +675,7 @@
                     currentMessage.content += (currentMessage.content ? '\n' : '') + line;
                 }
 
-                if (currentMessage.time || currentMessage.content || currentMessage.base64Data) {
+                if (currentMessage.time || currentMessage.content || currentMessage.base64Data || currentMessage.filePath) {
                     messages.push(currentMessage);
                 }
             }
@@ -551,6 +689,66 @@
             if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(ext)) return 'audio';
             if (['mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v', 'ogv'].includes(ext)) return 'video';
             return null;
+        }
+
+        // ===== 独立媒体文件：按需加载，避免主消息文件膨胀 =====
+
+        // 已加载媒体的 Blob URL 缓存，避免重复请求
+        const mediaCache = {};
+
+        // 读取仓库里的媒体文件，返回 Blob URL
+        async function loadMediaBlobUrl(filePath) {
+            if (mediaCache[filePath]) return mediaCache[filePath];
+
+            const url = `https://gitee.com/api/v5/repos/${GITEE_OWNER}/${GITEE_REPO}/contents/${encodeURIComponent(filePath)}?t=${Date.now()}`;
+            const response = await fetchWithTimeout(url, {
+                headers: { 'Authorization': `token ${TOKEN}` }
+            });
+
+            if (!response.ok) {
+                throw new Error(`媒体读取失败 HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            const rawBase64 = (data.content || '').replace(/\n/g, '');
+            if (!rawBase64) {
+                throw new Error('媒体内容为空');
+            }
+
+            const byteString = atob(rawBase64);
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+            const blobUrl = URL.createObjectURL(new Blob([ab]));
+            mediaCache[filePath] = blobUrl;
+            return blobUrl;
+        }
+
+        // 为页面上带 data-media-path 的元素按需加载媒体
+        function attachLazyMedia() {
+            const nodes = document.querySelectorAll('[data-media-path]');
+            nodes.forEach(node => {
+                const filePath = node.getAttribute('data-media-path');
+                const tag = node.tagName.toLowerCase();
+                const placeholder = node;
+
+                loadMediaBlobUrl(filePath).then(blobUrl => {
+                    if (tag === 'img') {
+                        placeholder.src = blobUrl;
+                        placeholder.style.opacity = '1';
+                    } else {
+                        placeholder.src = blobUrl;
+                    }
+                }).catch(err => {
+                    const tip = document.createElement('div');
+                    tip.className = 'media-error';
+                    tip.textContent = `媒体加载失败：${err.message}`;
+                    placeholder.parentNode.insertBefore(tip, placeholder);
+                    console.warn(err);
+                });
+            });
         }
 
         // 渲染消息列表（所有事件按索引传参，避免把 base64 内联进 HTML）
@@ -576,7 +774,17 @@
 
                 if (msg.type === 'image' && msg.base64Data) {
                     contentHtml += `
-                        <img src="${msg.base64Data}" class="message-image" onclick="previewImageByIndex(${index})" alt="${escapeHtml(msg.file)}">
+                        <img src="${msg.base64Data}" class="message-image" loading="lazy" decoding="async" onclick="previewImageByIndex(${index})" alt="${escapeHtml(msg.file)}">
+                        <div class="message-file">${escapeHtml(msg.file)}</div>
+                        <div class="btn-group">
+                            <button class="btn btn-success" style="padding: 6px 16px; font-size: 12px;" onclick="saveFileByIndex(${index})">保存图片</button>
+                            <button class="btn btn-danger" style="padding: 6px 16px; font-size: 12px;" onclick="deleteMessage(${index})">删除</button>
+                        </div>
+                    `;
+                } else if (msg.type === 'image' && msg.filePath) {
+                    // 新格式：图片单独存仓库，按需加载
+                    contentHtml += `
+                        <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-media-path="${escapeHtml(msg.filePath)}" class="message-image is-loading" style="opacity: 0.35;" onclick="previewImageByIndex(${index})" alt="${escapeHtml(msg.file)}">
                         <div class="message-file">${escapeHtml(msg.file)}</div>
                         <div class="btn-group">
                             <button class="btn btn-success" style="padding: 6px 16px; font-size: 12px;" onclick="saveFileByIndex(${index})">保存图片</button>
@@ -590,6 +798,22 @@
                         mediaHtml = `<audio controls class="message-media" src="${msg.base64Data}"></audio>`;
                     } else if (mediaType === 'video') {
                         mediaHtml = `<video controls class="message-media" style="max-height: 300px;" src="${msg.base64Data}"></video>`;
+                    }
+                    contentHtml += `
+                        <div class="message-file">${escapeHtml(msg.file)}</div>
+                        ${mediaHtml}
+                        <div class="btn-group">
+                            <button class="btn btn-success" style="padding: 6px 16px; font-size: 12px;" onclick="saveFileByIndex(${index})">保存文件</button>
+                            <button class="btn btn-danger" style="padding: 6px 16px; font-size: 12px;" onclick="deleteMessage(${index})">删除</button>
+                        </div>
+                    `;
+                } else if (msg.type === 'file' && msg.filePath) {
+                    const mediaType = getMediaType(msg.file);
+                    let mediaHtml = '';
+                    if (mediaType === 'audio') {
+                        mediaHtml = `<audio controls class="message-media" data-media-path="${escapeHtml(msg.filePath)}"></audio>`;
+                    } else if (mediaType === 'video') {
+                        mediaHtml = `<video controls class="message-media" style="max-height: 300px;" data-media-path="${escapeHtml(msg.filePath)}"></video>`;
                     }
                     contentHtml += `
                         <div class="message-file">${escapeHtml(msg.file)}</div>
@@ -621,6 +845,9 @@
                     </div>
                 `;
             }).join('');
+
+            // 渲染完成后，按需加载独立存储的媒体
+            attachLazyMedia();
         }
 
         // 用真实消息文件数据更新存储统计和剩余可存估算
@@ -659,11 +886,23 @@
                 `已用 ${usagePercent.toFixed(2)}%（配额按 1 GB 估算） · 均文件 ${formatFileSize(avgSize)}`;
         }
 
-        // 预览图片（按索引取数据）
-        function previewImageByIndex(index) {
+        // 预览图片（兼容内联 base64 与独立文件两种格式）
+        async function previewImageByIndex(index) {
             const msg = (window.messagesData || [])[index];
-            if (!msg || !msg.base64Data) return;
-            document.getElementById('previewImg').src = msg.base64Data;
+            if (!msg) return;
+
+            let src = msg.base64Data;
+            if (!src && msg.filePath) {
+                try {
+                    src = await loadMediaBlobUrl(msg.filePath);
+                } catch (e) {
+                    showToast('图片加载失败：' + e.message, 'error');
+                    return;
+                }
+            }
+            if (!src) return;
+
+            document.getElementById('previewImg').src = src;
             document.getElementById('imagePreview').classList.add('show');
         }
 
@@ -684,11 +923,9 @@
             return new Blob([ab], { type: mime });
         }
 
-        // 跨平台保存文件：iOS 用分享面板/新标签长按保存，其他平台用 a[download]
-        function saveBase64File(dataUrl, fileName) {
+        // 跨平台保存 Blob：iOS 用分享面板/新标签长按保存，其他平台用 a[download]
+        function saveBlob(blob, fileName) {
             try {
-                const blob = dataUrlToBlob(dataUrl);
-
                 // 优先使用 Web Share API（iOS Safari 分享面板里有"存储图像"）
                 if (navigator.canShare && navigator.canShare({ files: [blob] })) {
                     navigator.share({ files: [blob] }).catch(() => {});
@@ -721,19 +958,42 @@
                 }, 100);
                 showToast('文件已保存', 'success');
             } catch (error) {
-                showToast('保存失败: ' + error.message, 'error');
+                showToast('保存失败：' + error.message, 'error');
                 console.error(error);
             }
         }
 
-        // 按索引保存图片/文件
-        function saveFileByIndex(index) {
+        function saveBase64File(dataUrl, fileName) {
+            saveBlob(dataUrlToBlob(dataUrl), fileName);
+        }
+
+        // 按索引保存图片/文件（兼容内联 base64 与独立文件两种格式）
+        async function saveFileByIndex(index) {
             const msg = (window.messagesData || [])[index];
-            if (!msg || !msg.base64Data) {
-                showToast('文件数据不存在', 'error');
+            if (!msg) {
+                showToast('消息不存在', 'error');
                 return;
             }
-            saveBase64File(msg.base64Data, msg.file || 'file');
+
+            const fileName = msg.file || 'file';
+
+            if (msg.base64Data) {
+                saveBase64File(msg.base64Data, fileName);
+                return;
+            }
+
+            if (msg.filePath) {
+                try {
+                    const blobUrl = await loadMediaBlobUrl(msg.filePath);
+                    const blob = await (await fetch(blobUrl)).blob();
+                    saveBlob(blob, fileName);
+                } catch (e) {
+                    showToast('保存失败：' + e.message, 'error');
+                }
+                return;
+            }
+
+            showToast('文件数据不存在', 'error');
         }
 
         // Toast 提示
@@ -798,31 +1058,23 @@
             document.body.removeChild(textarea);
         }
 
-        // 加载消息（同时更新存储统计，只发一次请求）
+        // 加载消息：带超时、防并发，失败时给出可重试的提示
+        let isLoading = false;
+
         async function loadMessages() {
+            if (isLoading) return;
+            isLoading = true;
             showStatus('readStatus', '正在加载...', 'info');
 
             try {
-                const response = await fetch(REPO_API, {
-                    headers: { 'Authorization': `token ${TOKEN}` }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-                }
-
-                const data = await response.json();
-                const content = base64ToUtf8(data.content.replace(/\n/g, ''));
-
-                window.rawContent = content;
+                const { content } = await readRemoteFile();
                 const messages = parseMessages(content);
-                renderMessages(messages);
-                updateStorageStats(messages, content.length);
-
-                showStatus('readStatus', `加载成功，共 ${messages.length} 条消息`, 'success');
+                applyContent(content, `加载成功，共 ${messages.length} 条消息`);
             } catch (error) {
-                showStatus('readStatus', `加载失败: ${error.message}`, 'error');
+                showStatus('readStatus', `加载失败：${error.message}`, 'error');
                 console.error(error);
+            } finally {
+                isLoading = false;
             }
         }
 
@@ -838,47 +1090,86 @@
             showStatus('writeStatus', '正在发送...', 'info');
 
             try {
-                let existingContent = '';
-                let sha = '';
-                try {
-                    const checkResponse = await fetch(REPO_API, {
-                        headers: { 'Authorization': `token ${TOKEN}` }
-                    });
-                    if (checkResponse.ok) {
-                        const existing = await checkResponse.json();
-                        existingContent = base64ToUtf8(existing.content.replace(/\n/g, ''));
-                        sha = existing.sha;
-                    }
-                } catch (e) {
-                    console.log('文件不存在，将创建新文件');
-                }
+                const { content: existingContent, sha } = await readRemoteFile();
 
                 const timestamp = new Date().toLocaleString('zh-CN', { hour12: false });
                 const newMessage = `\n\n========================================\n${timestamp}\n${content}\n`;
                 const finalContent = existingContent + newMessage;
 
-                const response = await fetch(REPO_API, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${TOKEN}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message: '发送消息',
-                        content: utf8ToBase64(finalContent),
-                        sha: sha
-                    })
-                });
+                await writeRemoteFile(finalContent, sha, '发送消息');
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-                }
-
+                // 直接用本次写入的内容刷新界面，避免重新请求时读到缓存旧版本
+                applyContent(finalContent, `发送成功，共 ${parseMessages(finalContent).length} 条消息`);
                 showStatus('writeStatus', '发送成功', 'success');
                 document.getElementById('writeContent').value = '';
-                setTimeout(() => loadMessages(), 500);
             } catch (error) {
-                showStatus('writeStatus', `发送失败: ${error.message}`, 'error');
+                showStatus('writeStatus', `发送失败：${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        // 迁移：把旧消息里内联的 base64 媒体拆成独立文件，显著缩小主消息文件
+        async function migrateInlineMedia() {
+            if (!confirm('将把旧消息里的内联图片/文件拆成独立文件存储，主文件会大幅变小、加载更快。过程中请不要关闭页面。是否继续？')) {
+                return;
+            }
+
+            showStatus('readStatus', '正在读取数据...', 'info');
+
+            try {
+                const { content, sha } = await readRemoteFile();
+                const sections = content.split('========================================').filter(s => s.trim() !== '');
+                const total = sections.filter(s => s.includes('BASE64_DATA:')).length;
+
+                if (total === 0) {
+                    showStatus('readStatus', '没有需要迁移的内联媒体，当前已是最优状态', 'success');
+                    return;
+                }
+
+                const migrated = [];
+                let done = 0;
+
+                for (const section of sections) {
+                    if (!section.includes('BASE64_DATA:')) {
+                        migrated.push(section);
+                        continue;
+                    }
+
+                    // 拆出 BASE64 数据
+                    const idx = section.indexOf('BASE64_DATA:');
+                    const head = section.slice(0, idx);
+                    const dataPart = section.slice(idx + 'BASE64_DATA:'.length).trim();
+
+                    const nameMatch = head.match(/^\[(图片|文件)\]\s*(.+)$/m);
+                    const fileName = nameMatch ? nameMatch[2].trim() : 'file';
+                    const pureBase64 = dataPart.replace(/^data:[^,]*,/, '').replace(/\s+/g, '');
+
+                    if (!pureBase64) {
+                        migrated.push(section);
+                        continue;
+                    }
+
+                    try {
+                        const mediaPath = buildMediaPath(fileName);
+                        await createRepoFile(mediaPath, pureBase64, `迁移媒体 ${fileName}`);
+                        migrated.push(`${head.trim()}\n路径: ${mediaPath}\n`);
+                        done++;
+                        showStatus('readStatus', `正在迁移 ${done}/${total}...`, 'info');
+                    } catch (e) {
+                        console.warn('媒体迁移失败，保留原数据:', e);
+                        migrated.push(section);
+                    }
+                }
+
+                const newContent = migrated.join('\n\n========================================\n') + '\n';
+                showStatus('readStatus', '正在写入新数据...', 'info');
+                await writeRemoteFile(newContent, sha, '优化存储：拆分内联媒体');
+
+                applyContent(newContent, `优化完成，已迁移 ${done}/${total} 个媒体文件`);
+                document.getElementById('migrateHint').textContent =
+                    `已迁移 ${done} 个媒体文件，主文件从 ${formatFileSize(content.length)} 降到 ${formatFileSize(newContent.length)}。`;
+            } catch (error) {
+                showStatus('readStatus', `优化失败：${error.message}`, 'error');
                 console.error(error);
             }
         }
@@ -908,16 +1199,7 @@
         async function deleteMessage(index) {
             showConfirmDialog('确定要删除这条消息吗？', async () => {
                 try {
-                    const response = await fetch(REPO_API, {
-                        headers: { 'Authorization': `token ${TOKEN}` }
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`获取消息失败: HTTP ${response.status}`);
-                    }
-
-                    const data = await response.json();
-                    const existingContent = base64ToUtf8(data.content.replace(/\n/g, ''));
+                    const { content: existingContent, sha } = await readRemoteFile();
 
                     // 只保留非空段落，与 parseMessages 的展示顺序一一对应
                     const sectionList = existingContent.split('========================================').filter(s => s.trim() !== '');
@@ -934,27 +1216,13 @@
                         ? sectionList.join('\n\n========================================\n') + '\n'
                         : ' ';
 
-                    const updateResponse = await fetch(REPO_API, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `token ${TOKEN}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            message: '删除消息',
-                            content: utf8ToBase64(newContent),
-                            sha: data.sha
-                        })
-                    });
+                    await writeRemoteFile(newContent, sha, '删除消息');
 
-                    if (!updateResponse.ok) {
-                        throw new Error(`删除失败: HTTP ${updateResponse.status}`);
-                    }
-
+                    // 直接用本次写入的内容刷新界面，不重新请求
+                    applyContent(newContent, `已删除，剩余 ${parseMessages(newContent).length} 条消息`);
                     showToast('消息已删除', 'success');
-                    setTimeout(() => loadMessages(), 500);
                 } catch (error) {
-                    showToast('删除失败: ' + error.message, 'error');
+                    showToast('删除失败：' + error.message, 'error');
                     console.error(error);
                 }
             });
@@ -1034,7 +1302,33 @@
             }
         });
 
-        // 上传文件（任意格式转 base64 存储）
+        // 在仓库中新建独立文件（用于存媒体，避免主消息文件膨胀）
+        async function createRepoFile(path, base64Content, commitMessage) {
+            const url = `https://gitee.com/api/v5/repos/${GITEE_OWNER}/${GITEE_REPO}/contents/${encodeURIComponent(path)}?t=${Date.now()}`;
+            const response = await fetchWithTimeout(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: commitMessage, content: base64Content })
+            }, 120000);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}：${await response.text()}`);
+            }
+            return response.json();
+        }
+
+        // 生成安全的媒体文件路径
+        function buildMediaPath(fileName) {
+            const safeName = (fileName || 'file')
+                .replace(/[\\/:*?"<>|#%\s]/g, '_')
+                .slice(-80);
+            return `media/${Date.now()}_${safeName}`;
+        }
+
+        // 上传文件：媒体单独存为仓库文件，消息记录里只保存路径
         async function uploadFile() {
             const fileInput = document.getElementById('fileInput');
 
@@ -1050,71 +1344,46 @@
                 return;
             }
 
-            showStatus('fileStatus', `正在处理 ${file.name}（${formatFileSize(file.size)}）...`, 'info');
+            showStatus('fileStatus', `正在读取 ${file.name}（${formatFileSize(file.size)}）...`, 'info');
 
             try {
                 const reader = new FileReader();
                 reader.onload = async function(e) {
-                    const base64Data = e.target.result; // data:<mime>;base64,xxx
+                    const dataUrl = e.target.result;
+                    const pureBase64 = dataUrl.split(',')[1];
                     const isImage = file.type.startsWith('image/');
                     const messageType = isImage ? '图片' : '文件';
                     const timestampStr = new Date().toLocaleString('zh-CN', { hour12: false });
-
-                    const messageContent = `[${messageType}] ${file.name}\n上传时间: ${timestampStr}\n大小: ${formatFileSize(file.size)}\nBASE64_DATA:\n${base64Data}\n`;
+                    const mediaPath = buildMediaPath(file.name);
 
                     try {
-                        let existingContent = '';
-                        let sha = '';
+                        showStatus('fileStatus', `正在上传 ${file.name}...`, 'info');
 
-                        try {
-                            const response = await fetch(REPO_API, {
-                                headers: { 'Authorization': `token ${TOKEN}` }
-                            });
-                            if (response.ok) {
-                                const data = await response.json();
-                                existingContent = base64ToUtf8(data.content.replace(/\n/g, ''));
-                                sha = data.sha;
-                            }
-                        } catch (e) {
-                            console.log('消息文件不存在，将创建新文件');
-                        }
+                        // 1. 媒体文件单独提交到仓库
+                        await createRepoFile(mediaPath, pureBase64, `上传媒体 ${file.name}`);
 
+                        // 2. 消息记录只保存路径引用
+                        const messageContent = `[${messageType}] ${file.name}\n上传时间: ${timestampStr}\n大小: ${formatFileSize(file.size)}\n路径: ${mediaPath}\n`;
+
+                        const { content: existingContent, sha } = await readRemoteFile();
                         const newContent = existingContent + '\n\n========================================\n' + messageContent;
 
-                        const requestBody = {
-                            message: '上传文件',
-                            content: utf8ToBase64(newContent)
-                        };
-                        if (sha) requestBody.sha = sha;
+                        await writeRemoteFile(newContent, sha, '记录上传');
 
-                        const response = await fetch(REPO_API, {
-                            method: 'PUT',
-                            headers: {
-                                'Authorization': `token ${TOKEN}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(requestBody)
-                        });
-
-                        if (!response.ok) {
-                            const errorText = await response.text();
-                            throw new Error(`HTTP ${response.status}: ${errorText}`);
-                        }
-
+                        // 3. 直接用已知内容刷新界面，不再重新请求
+                        applyContent(newContent, `已上传，共 ${parseMessages(newContent).length} 条消息`);
                         showStatus('fileStatus', `${messageType}上传成功`, 'success');
 
                         fileInput.value = '';
                         document.getElementById('fileInfo').textContent = '未选择文件';
-
-                        setTimeout(() => loadMessages(), 500);
                     } catch (error) {
-                        showStatus('fileStatus', `上传失败: ${error.message}`, 'error');
+                        showStatus('fileStatus', `上传失败：${error.message}`, 'error');
                         console.error(error);
                     }
                 };
                 reader.readAsDataURL(file);
             } catch (error) {
-                showStatus('fileStatus', `读取文件失败: ${error.message}`, 'error');
+                showStatus('fileStatus', `读取文件失败：${error.message}`, 'error');
                 console.error(error);
             }
         }
